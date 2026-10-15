@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ardhana Clip 9:16 - Video Clipper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;700&family=Poppins:wght@400;700&family=Montserrat:wght@400;700&family=Bebas+Neue&family=Anton&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Styling for Range Sliders to match the #FA6F05 Theme */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #FA6F05;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 0 2px #1e293b; /* slate-800 */
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            background: #E85F00;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #334155; /* slate-700 */
+            border-radius: 2px;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; /* slate-950 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; /* slate-700 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; /* slate-600 */
+        }
+
+        /* Canvas aspect ratio preservation */
+        #previewCanvas {
+            aspect-ratio: 9 / 16;
+            max-height: calc(100vh - 4rem);
+            max-width: 100%;
+            object-fit: contain;
+            background-color: #000;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        .active-btn {
+            background-color: #FA6F05 !important;
+            color: white !important;
+            border-color: #FA6F05 !important;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#151e2e',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        primary: {
+                            DEFAULT: '#FA6F05',
+                            hover: '#E85F00',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- SIDEBAR CONTROLS -->
+    <aside class="w-full md:w-[400px] flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col h-[50vh] md:h-screen overflow-y-auto">
+        
+        <!-- Header -->
+        <div class="p-4 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-white">
+                <svg class="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4zM15 16H5V8h10v8z"/></svg>
+                Ardhana Clip <span class="text-primary text-sm bg-primary/10 px-2 py-0.5 rounded ml-1">9:16</span>
+            </h1>
+        </div>
+
+        <div class="p-4 space-y-6 flex-grow">
+            <!-- 1. VIDEO INPUT -->
+            <section class="space-y-3">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">1. Video Source</h2>
+                <div class="relative">
+                    <input type="file" id="videoUpload" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div id="uploadZone" class="border-2 border-dashed border-slate-700 hover:border-primary bg-slate-800/50 rounded-lg p-6 flex flex-col items-center justify-center transition-colors">
+                        <svg class="w-8 h-8 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <span class="text-sm text-slate-300">Pilih atau Drag Video</span>
+                        <span class="text-xs text-slate-500 mt-1">MP4, WebM, MOV</span>
+                    </div>
+                </div>
+                <div id="videoInfo" class="hidden text-xs text-slate-400 bg-slate-850 p-3 rounded border border-slate-800">
+                    <div class="flex justify-between mb-1"><span class="font-medium text-slate-300" id="infoName">filename.mp4</span></div>
+                    <div class="flex justify-between"><span>Durasi:</span> <span id="infoDuration">-</span></div>
+                    <div class="flex justify-between"><span>Resolusi:</span> <span id="infoResolution">-</span></div>
+                </div>
+            </section>
+
+            <!-- 4. VIDEO TRIMMER -->
+            <section class="space-y-3">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">2. Trim Video</h2>
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs text-slate-500 mb-1">Mulai (Detik)</label>
+                        <input type="number" id="trimStart" value="0" min="0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs text-slate-500 mb-1">Selesai (Detik)</label>
+                        <input type="number" id="trimEnd" value="10" min="0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
+                    </div>
+                </div>
+                <div class="text-xs text-primary bg-primary/10 py-1.5 px-3 rounded inline-block">
+                    Durasi Clip: <span id="clipDurationDisplay" class="font-bold">10.0</span> dtk
+                </div>
+            </section>
+
+            <!-- 3. CROP & SMART FRAMING -->
+            <section class="space-y-3">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">3. Framing 9:16</h2>
+                <div class="flex gap-2">
+                    <button id="presetLeft" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs py-2 rounded transition-colors">👈 Kiri</button>
+                    <button id="presetCenter" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs py-2 rounded transition-colors active-btn">👤 Tengah</button>
+                    <button id="presetRight" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs py-2 rounded transition-colors">Kanan 👉</button>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs text-slate-500 mb-1">
+                        <span>Kiri (0%)</span>
+                        <span id="cropValDisplay">50%</span>
+                        <span>Kanan (100%)</span>
+                    </div>
+                    <input type="range" id="cropSlider" min="0" max="100" value="50">
+                </div>
+            </section>
+
+            <!-- 5-11. CAPTION EDITOR -->
+            <section class="space-y-4 pt-4 border-t border-slate-800">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">4. Caption Editor</h2>
+                
+                <!-- Text Input -->
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Teks Caption</label>
+                    <textarea id="captionText" rows="3" placeholder="Masukkan caption menarik di sini..." class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all resize-none"></textarea>
+                </div>
+
+                <!-- Font Styling (Grid) -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Font Family</label>
+                        <select id="fontFamily" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="Inter">Inter</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Poppins">Poppins</option>
+                            <option value="Montserrat" selected>Montserrat</option>
+                            <option value="Bebas Neue">Bebas Neue</option>
+                            <option value="Anton">Anton</option>
+                            <option value="Impact, sans-serif">Impact</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Alignment</label>
+                        <div class="flex gap-1 border border-slate-700 rounded p-0.5 bg-slate-950">
+                            <button id="alignLeft" class="flex-1 py-1 text-slate-400 hover:text-white rounded text-sm transition-colors"><svg class="w-4 h-4 mx-auto" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h8a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path></svg></button>
+                            <button id="alignCenter" class="flex-1 py-1 text-slate-400 hover:text-white rounded text-sm bg-slate-800 transition-colors"><svg class="w-4 h-4 mx-auto" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm4 5a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1zm-4 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path></svg></button>
+                            <button id="alignRight" class="flex-1 py-1 text-slate-400 hover:text-white rounded text-sm transition-colors"><svg class="w-4 h-4 mx-auto" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm8 5a1 1 0 011-1h4a1 1 0 110 2h-4a1 1 0 01-1-1zm-8 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path></svg></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Font Size & Outline Size -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-500 mb-1">
+                            <span>Size</span> <span id="fontSizeDisplay">60px</span>
+                        </div>
+                        <input type="range" id="fontSize" min="24" max="120" value="60">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-500 mb-1">
+                            <span>Outline</span> <span id="outlineSizeDisplay">4px</span>
+                        </div>
+                        <input type="range" id="outlineSize" min="0" max="15" value="4">
+                    </div>
+                </div>
+
+                <!-- Colors -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Text Color</label>
+                        <input type="color" id="fontColor" value="#FFFFFF" class="w-full h-8 bg-transparent cursor-pointer rounded border border-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Outline Color</label>
+                        <input type="color" id="outlineColor" value="#000000" class="w-full h-8 bg-transparent cursor-pointer rounded border border-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Background</label>
+                        <div class="flex items-center gap-1 border border-slate-700 rounded h-8 px-1 bg-slate-950">
+                            <input type="checkbox" id="useBg" class="accent-primary cursor-pointer">
+                            <input type="color" id="bgColor" value="#000000" class="w-full h-6 bg-transparent cursor-pointer border-none p-0 opacity-50" disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Positioning -->
+                <div class="pt-2">
+                    <label class="block text-xs text-slate-500 mb-2">Posisi (X / Y)</label>
+                    <div class="space-y-3">
+                        <input type="range" id="posX" min="0" max="100" value="50" title="Horizontal Position">
+                        <input type="range" id="posY" min="0" max="100" value="50" title="Vertical Position">
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Action Panel (Sticky Bottom) -->
+        <div class="p-4 border-t border-slate-800 bg-slate-900 sticky bottom-0 z-10 space-y-3">
+            <div class="flex items-center justify-between mb-2">
+                <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-400 hover:text-white transition-colors">
+                    <input type="checkbox" id="showSafeZone" class="accent-primary w-4 h-4" checked>
+                    <span>Show Safe Zone</span>
+                </label>
+            </div>
+            
+            <div class="flex gap-2">
+                <!-- 14. PREVIEW CLIP -->
+                <button id="btnPreview" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 rounded flex items-center justify-center gap-2 transition-colors border border-slate-700">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                    Preview Clip
+                </button>
+            </div>
+
+            <!-- 15. EXPORT BUTTON -->
+            <button id="btnExport" class="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded flex items-center justify-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                <span id="exportText">Pangkas & Unduh</span>
+            </button>
+            
+            <!-- Progress Bar (Hidden by default) -->
+            <div id="exportProgress" class="hidden w-full bg-slate-800 rounded-full h-2 mt-2 overflow-hidden">
+                <div id="exportProgressBar" class="bg-primary h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN PREVIEW AREA -->
+    <main class="flex-1 flex flex-col items-center justify-center bg-slate-950 p-4 md:p-8 relative">
+        <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 z-10 pointer-events-none">
+            <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            <p>Upload video untuk melihat preview 9:16</p>
+        </div>
+
+        <!-- The Canvas -->
+        <div class="relative w-full flex justify-center items-center h-full max-h-full">
+            <canvas id="previewCanvas" width="1080" height="1920" class="rounded-lg shadow-2xl bg-black border border-slate-800 transition-opacity duration-300 opacity-50"></canvas>
+            
+            <!-- Playback Status Overlay (Mobile/Visual feedback) -->
+            <div id="playbackStatus" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity">
+                <div class="bg-black/50 text-white p-4 rounded-full backdrop-blur-sm">
+                    <svg id="statusIcon" class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error/Toast Notification -->
+        <div id="toast" class="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded shadow-lg transform transition-transform translate-y-[-150%] opacity-0 z-50 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span id="toastMsg">Error message</span>
+        </div>
+    </main>
+
+    <!-- Hidden Video Element for Processing -->
+    <video id="sourceVideo" class="hidden" crossorigin="anonymous" playsinline></video>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            hasVideo: false,
+            duration: 0,
+            videoWidth: 0,
+            videoHeight: 0,
+            cropX: 50, // 0 to 100%
+            trimStart: 0,
+            trimEnd: 10,
+            caption: {
+                text: '',
+                fontFamily: 'Montserrat',
+                fontSize: 60,
+                fontColor: '#FFFFFF',
+                outlineSize: 4,
+                outlineColor: '#000000',
+                useBg: false,
+                bgColor: '#000000',
+                bgOpacity: 0.7,
+                align: 'center', // left, center, right
+                posX: 50, // 0-100
+                posY: 50, // 0-100
+                maxWidth: 0.8 // 80% of canvas width
+            },
+            showSafeZone: true,
+            isPlayingPreview: false,
+            isExporting: false
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            videoUpload: document.getElementById('videoUpload'),
+            sourceVideo: document.getElementById('sourceVideo'),
+            canvas: document.getElementById('previewCanvas'),
+            ctx: document.getElementById('previewCanvas').getContext('2d'),
+            emptyState: document.getElementById('emptyState'),
+            
+            // Info
+            videoInfo: document.getElementById('videoInfo'),
+            infoName: document.getElementById('infoName'),
+            infoDuration: document.getElementById('infoDuration'),
+            infoResolution: document.getElementById('infoResolution'),
+            
+            // Trim
+            trimStart: document.getElementById('trimStart'),
+            trimEnd: document.getElementById('trimEnd'),
+            clipDurationDisplay: document.getElementById('clipDurationDisplay'),
+            
+            // Framing
+            cropSlider: document.getElementById('cropSlider'),
+            cropValDisplay: document.getElementById('cropValDisplay'),
+            btnLeft: document.getElementById('presetLeft'),
+            btnCenter: document.getElementById('presetCenter'),
+            btnRight: document.getElementById('presetRight'),
+            
+            // Caption
+            captionText: document.getElementById('captionText'),
+            fontFamily: document.getElementById('fontFamily'),
+            fontSize: document.getElementById('fontSize'),
+            fontSizeDisplay: document.getElementById('fontSizeDisplay'),
+            fontColor: document.getElementById('fontColor'),
+            outlineSize: document.getElementById('outlineSize'),
+            outlineSizeDisplay: document.getElementById('outlineSizeDisplay'),
+            outlineColor: document.getElementById('outlineColor'),
+            useBg: document.getElementById('useBg'),
+            bgColor: document.getElementById('bgColor'),
+            alignBtns: [document.getElementById('alignLeft'), document.getElementById('alignCenter'), document.getElementById('alignRight')],
+            posX: document.getElementById('posX'),
+            posY: document.getElementById('posY'),
+            
+            // Options
+            showSafeZone: document.getElementById('showSafeZone'),
+            
+            // Actions
+            btnPreview: document.getElementById('btnPreview'),
+            btnExport: document.getElementById('btnExport'),
+            exportText: document.getElementById('exportText'),
+            exportProgress: document.getElementById('exportProgress'),
+            exportProgressBar: document.getElementById('exportProgressBar'),
+            
+            toast: document.getElementById('toast'),
+            toastMsg: document.getElementById('toastMsg')
+        };
+
+        const TARGET_WIDTH = 1080;
+        const TARGET_HEIGHT = 1920;
+
+        // --- Setup Event Listeners ---
+        function initEvents() {
+            // File Upload
+            els.videoUpload.addEventListener('change', handleFileUpload);
+            
+            // Trimmer
+            els.trimStart.addEventListener('input', (e) => updateTrim(e.target.value, true));
+            els.trimEnd.addEventListener('input', (e) => updateTrim(e.target.value, false));
+            
+            // Framing
+            els.cropSlider.addEventListener('input', (e) => {
+                state.cropX = parseFloat(e.target.value);
+                els.cropValDisplay.textContent = `${Math.round(state.cropX)}%`;
+                updateActivePreset();
+                requestRender();
+            });
+            els.btnLeft.addEventListener('click', () => setCropPreset(15, els.btnLeft));
+            els.btnCenter.addEventListener('click', () => setCropPreset(50, els.btnCenter));
+            els.btnRight.addEventListener('click', () => setCropPreset(85, els.btnRight));
+            
+            // Caption
+            els.captionText.addEventListener('input', (e) => { state.caption.text = e.target.value; requestRender(); });
+            els.fontFamily.addEventListener('change', (e) => { state.caption.fontFamily = e.target.value; requestRender(); });
+            els.fontSize.addEventListener('input', (e) => { 
+                state.caption.fontSize = parseInt(e.target.value); 
+                els.fontSizeDisplay.textContent = state.caption.fontSize + 'px';
+                requestRender(); 
+            });
+            els.fontColor.addEventListener('input', (e) => { state.caption.fontColor = e.target.value; requestRender(); });
+            els.outlineSize.addEventListener('input', (e) => { 
+                state.caption.outlineSize = parseInt(e.target.value); 
+                els.outlineSizeDisplay.textContent = state.caption.outlineSize + 'px';
+                requestRender(); 
+            });
+            els.outlineColor.addEventListener('input', (e) => { state.caption.outlineColor = e.target.value; requestRender(); });
+            
+            els.useBg.addEventListener('change', (e) => { 
+                state.caption.useBg = e.target.checked; 
+                els.bgColor.disabled = !e.target.checked;
+                if(e.target.checked) els.bgColor.classList.remove('opacity-50');
+                else els.bgColor.classList.add('opacity-50');
+                requestRender(); 
+            });
+            els.bgColor.addEventListener('input', (e) => { state.caption.bgColor = e.target.value; requestRender(); });
+            
+            els.posX.addEventListener('input', (e) => { state.caption.posX = parseFloat(e.target.value); requestRender(); });
+            els.posY.addEventListener('input', (e) => { state.caption.posY = parseFloat(e.target.value); requestRender(); });
+            
+            els.alignBtns[0].addEventListener('click', () => setAlignment('left', 0));
+            els.alignBtns[1].addEventListener('click', () => setAlignment('center', 1));
+            els.alignBtns[2].addEventListener('click', () => setAlignment('right', 2));
+            
+            els.showSafeZone.addEventListener('change', (e) => { state.showSafeZone = e.target.checked; requestRender(); });
+            
+            // Actions
+            els.btnPreview.addEventListener('click', togglePreviewClip);
+            els.btnExport.addEventListener('click', startExport);
+            
+            // Video Events
+            els.sourceVideo.addEventListener('loadedmetadata', handleVideoLoaded);
+            els.sourceVideo.addEventListener('timeupdate', handleTimeUpdate);
+            els.sourceVideo.addEventListener('ended', () => {
+                if(state.isPlayingPreview) togglePreviewClip();
+            });
+        }
+
+        function showToast(msg) {
+            els.toastMsg.textContent = msg;
+            els.toast.classList.remove('translate-y-[-150%]', 'opacity-0');
+            setTimeout(() => {
+                els.toast.classList.add('translate-y-[-150%]', 'opacity-0');
+            }, 3000);
+        }
+
+        // --- Core Logic ---
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('video/')) {
+                showToast("Harap pilih file video yang valid.");
+                return;
+            }
+
+            const url = URL.createObjectURL(file);
+            els.sourceVideo.src = url;
+            
+            // Update UI
+            els.infoName.textContent = file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name;
+            els.videoInfo.classList.remove('hidden');
+            els.emptyState.classList.add('hidden');
+            els.canvas.classList.remove('opacity-50');
+            
+            // Reset state
+            state.hasVideo = false; 
+            if(state.isPlayingPreview) togglePreviewClip();
+        }
+
+        function handleVideoLoaded() {
+            state.hasVideo = true;
+            state.duration = els.sourceVideo.duration;
+            state.videoWidth = els.sourceVideo.videoWidth;
+            state.videoHeight = els.sourceVideo.videoHeight;
+            
+            // Update Info
+            els.infoDuration.textContent = state.duration.toFixed(1) + ' dtk';
+            els.infoResolution.textContent = `${state.videoWidth} x ${state.videoHeight}`;
+            
+            // Setup Trimmer
+            els.trimStart.max = state.duration;
+            els.trimEnd.max = state.duration;
+            
+            state.trimStart = 0;
+            state.trimEnd = Math.min(15, state.duration); // Default 15s clip
+            els.trimStart.value = state.trimStart;
+            els.trimEnd.value = state.trimEnd;
+            updateDurationDisplay();
+
+            // Seek to start and render first frame
+            els.sourceVideo.currentTime = state.trimStart;
+            els.sourceVideo.play().then(() => {
+                els.sourceVideo.pause();
+                requestRender();
+            }).catch(e => {
+                console.log("Auto-play prevented, seeking instead.");
+                requestRender();
+            });
+        }
+
+        function updateTrim(val, isStart) {
+            let v = parseFloat(val);
+            if(isNaN(v)) v = 0;
+            if(v < 0) v = 0;
+            if(v > state.duration) v = state.duration;
+            
+            if(isStart) {
+                if(v >= state.trimEnd) v = state.trimEnd - 0.1; // Prevent crossing
+                state.trimStart = v;
+                els.trimStart.value = v;
+                // Seek to new start if not playing
+                if(!state.isPlayingPreview) {
+                    els.sourceVideo.currentTime = state.trimStart;
+                    requestRender();
+                }
+            } else {
+                if(v <= state.trimStart) v = state.trimStart + 0.1;
+                state.trimEnd = v;
+                els.trimEnd.value = v;
+            }
+            updateDurationDisplay();
+        }
+
+        function updateDurationDisplay() {
+            const dur = state.trimEnd - state.trimStart;
+            els.clipDurationDisplay.textContent = dur.toFixed(1);
+        }
+
+        function setCropPreset(val, btn) {
+            state.cropX = val;
+            els.cropSlider.value = val;
+            els.cropValDisplay.textContent = `${val}%`;
+            
+            // Update active styling
+            [els.btnLeft, els.btnCenter, els.btnRight].forEach(b => {
+                b.classList.remove('active-btn');
+                b.classList.add('bg-slate-800');
+            });
+            btn.classList.add('active-btn');
+            btn.classList.remove('bg-slate-800');
+            
+            requestRender();
+        }
+
+        function updateActivePreset() {
+            [els.btnLeft, els.btnCenter, els.btnRight].forEach(b => {
+                b.classList.remove('active-btn');
+                b.classList.add('bg-slate-800');
+            });
+            if(state.cropX == 15) els.btnLeft.classList.add('active-btn');
+            else if(state.cropX == 50) els.btnCenter.classList.add('active-btn');
+            else if(state.cropX == 85) els.btnRight.classList.add('active-btn');
+        }
+
+        function setAlignment(align, index) {
+            state.caption.align = align;
+            els.alignBtns.forEach(b => b.classList.remove('bg-slate-800'));
+            els.alignBtns[index].classList.add('bg-slate-800');
+            requestRender();
+        }
+
+        // --- Rendering Engine ---
+        let renderRequested = false;
+
+        function requestRender() {
+            if (!renderRequested && state.hasVideo) {
+                renderRequested = true;
+                requestAnimationFrame(drawFrame);
+            }
+        }
+
+        function drawFrame() {
+            if(!state.hasVideo) return;
+            
+            const ctx = els.ctx;
+            const w = TARGET_WIDTH;
+            const h = TARGET_HEIGHT;
+            
+            // Clear
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, w, h);
+            
+            // 1. Calculate Crop (Fit Height, Crop Width)
+            const srcW = state.videoWidth;
+            const srcH = state.videoHeight;
+            
+            // Target aspect ratio
+            const targetAspect = w / h; // 9/16 = 0.5625
+            
+            // Source dimensions to crop
+            let cropH = srcH;
+            let cropW = srcH * targetAspect;
+            
+            // If source is already narrower than 9:16 (rare, usually it's landscape 16:9)
+            if (cropW > srcW) {
+                cropW = srcW;
+                cropH = srcW / targetAspect;
+            }
+            
+            // Calculate X offset based on cropX slider (0-100)
+            // Available panning width
+            const availableX = srcW - cropW;
+            const srcX = (state.cropX / 100) * availableX;
+            // Center Y
+            const srcY = (srcH - cropH) / 2;
+            
+            // Draw Video
+            try {
+                ctx.drawImage(els.sourceVideo, srcX, srcY, cropW, cropH, 0, 0, w, h);
+            } catch(e) {
+                // Ignore draw errors if video isn't ready
+            }
+
+            // 2. Draw Safe Zone
+            if (state.showSafeZone && !state.isExporting) {
+                drawSafeZone(ctx, w, h);
+            }
+
+            // 3. Draw Caption
+            if (state.caption.text.trim().length > 0) {
+                drawCaption(ctx, w, h);
+            }
+
+            renderRequested = false;
+            
+            // Continue loop if playing
+            if(state.isPlayingPreview || state.isExporting) {
+                requestAnimationFrame(drawFrame);
+            }
+        }
+
+        function drawSafeZone(ctx, w, h) {
+            ctx.strokeStyle = 'rgba(250, 111, 5, 0.7)'; // Primary color semi-transparent
+            ctx.lineWidth = 4;
+            ctx.setLineDash([20, 20]);
+            
+            // TikTok/Reels approximate safe zone
+            // Top: 15% (Status bar, Following/For You)
+            // Bottom: 20% (Caption, user info, music)
+            // Right: 15% (Buttons)
+            // Left: 5%
+            
+            const marginT = h * 0.15;
+            const marginB = h * 0.20;
+            const marginR = w * 0.15;
+            const marginL = w * 0.05;
+            
+            ctx.strokeRect(marginL, marginT, w - marginL - marginR, h - marginT - marginB);
+            ctx.setLineDash([]); // Reset
+            
+            // Helper text
+            ctx.font = '30px Inter';
+            ctx.fillStyle = 'rgba(250, 111, 5, 0.7)';
+            ctx.textAlign = 'center';
+            ctx.fillText("SAFE ZONE", w/2, marginT + 40);
+        }
+
+        function drawCaption(ctx, canvasW, canvasH) {
+            const cap = state.caption;
+            const maxTextWidth = canvasW * cap.maxWidth;
+            
+            ctx.font = `bold ${cap.fontSize}px "${cap.fontFamily}", sans-serif`;
+            ctx.textAlign = cap.align;
+            ctx.textBaseline = 'top';
+            
+            // 1. Text Wrapping Logic
+            const words = cap.text.split(/(\n|\s+)/); // keep newlines
+            let lines = [];
+            let currentLine = '';
+            
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                if (word === '\n') {
+                    lines.push(currentLine);
+                    currentLine = '';
+                    continue;
+                }
+                
+                const testLine = currentLine + word;
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                
+                if (testWidth > maxTextWidth && currentLine !== '') {
+                    lines.push(currentLine.trim());
+                    currentLine = word.trim() + ' ';
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            lines.push(currentLine.trim());
+            
+            // 2. Calculate Positioning
+            const lineHeight = cap.fontSize * 1.2;
+            const totalTextHeight = lines.length * lineHeight;
+            
+            // Base X based on position slider
+            // If slider is 50%, x is center. If 0%, x is left edge + margin.
+            let baseX = (cap.posX / 100) * canvasW;
+            
+            // Base Y based on position slider
+            // posY defines where the TOP of the text block starts relative to canvas height
+            // We adjust so 100% doesn't push text completely off screen
+            const availableH = canvasH - totalTextHeight;
+            let baseY = (cap.posY / 100) * availableH;
+            
+            // Adjust X alignment anchor based on ctx.textAlign
+            if (cap.align === 'left') {
+                // Ensure it doesn't go off left screen too much
+                baseX = Math.max(20, (cap.posX / 100) * (canvasW - maxTextWidth));
+            } else if (cap.align === 'right') {
+                baseX = Math.min(canvasW - 20, canvasW - ((100 - cap.posX) / 100) * (canvasW - maxTextWidth));
+            } else {
+                // Center
+                baseX = (cap.posX / 100) * canvasW;
+            }
+
+            // 3. Draw Background if enabled
+            if (cap.useBg) {
+                // Calculate bounding box for all lines
+                let longestWidth = 0;
+                lines.forEach(l => {
+                    const w = ctx.measureText(l).width;
+                    if(w > longestWidth) longestWidth = w;
+                });
+                
+                const paddingX = cap.fontSize * 0.5;
+                const paddingY = cap.fontSize * 0.3;
+                
+                let bgX = baseX;
+                if (cap.align === 'center') bgX = baseX - (longestWidth / 2);
+                else if (cap.align === 'right') bgX = baseX - longestWidth;
+                
+                ctx.fillStyle = hexToRgba(cap.bgColor, cap.bgOpacity);
+                ctx.fillRect(
+                    bgX - paddingX, 
+                    baseY - paddingY, 
+                    longestWidth + (paddingX * 2), 
+                    totalTextHeight + (paddingY * 2)
+                );
+            }
+
+            // 4. Draw Text and Outline
+            ctx.lineWidth = cap.outlineSize;
+            ctx.strokeStyle = cap.outlineColor;
+            ctx.fillStyle = cap.fontColor;
+            ctx.lineJoin = 'round'; // smooth stroke corners
+            
+            for (let j = 0; j < lines.length; j++) {
+                const textY = baseY + (j * lineHeight);
+                
+                if (cap.outlineSize > 0) {
+                    ctx.strokeText(lines[j], baseX, textY);
+                }
+                ctx.fillText(lines[j], baseX, textY);
+            }
+        }
+
+        // Helper for colors
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16),
+                  g = parseInt(hex.slice(3, 5), 16),
+                  b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        // --- Playback Controls ---
+        function togglePreviewClip() {
+            if (!state.hasVideo) return;
+            
+            if (state.isPlayingPreview) {
+                els.sourceVideo.pause();
+                state.isPlayingPreview = false;
+                els.btnPreview.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg> Preview Clip`;
+                els.btnPreview.classList.remove('bg-primary', 'text-white', 'border-primary');
+            } else {
+                els.sourceVideo.currentTime = state.trimStart;
+                els.sourceVideo.play().then(() => {
+                    state.isPlayingPreview = true;
+                    requestRender(); // Start loop
+                    els.btnPreview.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg> Stop`;
+                    els.btnPreview.classList.add('bg-primary', 'text-white', 'border-primary');
+                }).catch(e => showToast("Browser memblokir pemutaran otomatis."));
+            }
+        }
+
+        function handleTimeUpdate() {
+            if (state.isPlayingPreview || state.isExporting) {
+                // Stop playback if we reached trimEnd
+                if (els.sourceVideo.currentTime >= state.trimEnd) {
+                    els.sourceVideo.pause();
+                    if (state.isPlayingPreview) {
+                        togglePreviewClip(); // Reset UI
+                        els.sourceVideo.currentTime = state.trimStart; // Reset to start
+                        requestRender(); // render paused frame
+                    }
+                }
+            }
+        }
+
+        // --- EXPORT LOGIC ---
+        let mediaRecorder;
+        let recordedChunks = [];
+        let audioContext;
+        let mediaStreamDestination;
+        let mediaElementSource;
+
+        async function startExport() {
+            if (!state.hasVideo) {
+                showToast("Upload video terlebih dahulu.");
+                return;
+            }
+            if (state.trimStart >= state.trimEnd) {
+                showToast("Durasi tidak valid.");
+                return;
+            }
+            if (state.isExporting) return; // Prevent double click
+
+            // Setup UI for exporting
+            state.isExporting = true;
+            if(state.isPlayingPreview) togglePreviewClip(); // Stop preview if running
+            
+            els.exportText.textContent = "Memproses...";
+            els.btnExport.classList.add('opacity-75', 'cursor-not-allowed');
+            els.btnExport.disabled = true;
+            els.exportProgress.classList.remove('hidden');
+            els.exportProgressBar.style.width = '0%';
+            
+            // Force hide safe zone during export internally
+            const originalSafeZoneSetting = state.showSafeZone;
+            state.showSafeZone = false;
+            
+            try {
+                // 1. Setup Audio Capture (Web Audio API for sync)
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    // Connect video to Audio Context
+                    mediaElementSource = audioContext.createMediaElementSource(els.sourceVideo);
+                }
+                
+                mediaStreamDestination = audioContext.createMediaStreamDestination();
+                
+                // Route audio: Source -> Destination (for recording) & -> Speakers (optional, let's keep it silent to prevent double audio if they have preview playing)
+                mediaElementSource.disconnect(); // clear old connections
+                mediaElementSource.connect(mediaStreamDestination);
+                // mediaElementSource.connect(audioContext.destination); // Uncomment if you want to hear it while exporting
+                
+                const audioTracks = mediaStreamDestination.stream.getAudioTracks();
+
+                // 2. Setup Canvas Capture
+                // Request 30 fps
+                const canvasStream = els.canvas.captureStream(30); 
+                const videoTracks = canvasStream.getVideoTracks();
+
+                // 3. Combine Tracks
+                let combinedStream;
+                if (audioTracks.length > 0) {
+                    combinedStream = new MediaStream([videoTracks[0], audioTracks[0]]);
+                } else {
+                    combinedStream = new MediaStream([videoTracks[0]]);
+                    console.warn("No audio track found, exporting video only.");
+                }
+
+                // 4. Initialize MediaRecorder
+                // Try to find supported codec
+                let options = { mimeType: 'video/webm;codecs=vp9,opus' };
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options = { mimeType: 'video/webm;codecs=vp8,opus' };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { mimeType: 'video/webm' }; // Fallback
+                    }
+                }
+
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(combinedStream, options);
+
+                mediaRecorder.ondataavailable = function(e) {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = function() {
+                    finalizeExport(originalSafeZoneSetting);
+                };
+
+                // 5. Start Recording Process
+                els.sourceVideo.currentTime = state.trimStart;
+                
+                // Wait for video to seek
+                await new Promise(resolve => {
+                    els.sourceVideo.addEventListener('seeked', resolve, { once: true });
+                });
+
+                // Start recording & playback
+                mediaRecorder.start();
+                await els.sourceVideo.play();
+                
+                // Start render loop explicitly for export
+                requestAnimationFrame(exportLoop);
+
+            } catch (err) {
+                console.error("Export Error:", err);
+                showToast("Gagal memulai export. " + err.message);
+                resetExportUI(originalSafeZoneSetting);
+            }
+        }
+
+        function exportLoop() {
+            if (!state.isExporting) return;
+            
+            drawFrame(); // Draw current frame
+            
+            // Calculate progress
+            const duration = state.trimEnd - state.trimStart;
+            const current = els.sourceVideo.currentTime - state.trimStart;
+            let progress = (current / duration) * 100;
+            if(progress > 100) progress = 100;
+            
+            els.exportProgressBar.style.width = `${progress}%`;
+
+            // Check if done
+            if (els.sourceVideo.currentTime >= state.trimEnd) {
+                els.sourceVideo.pause();
+                mediaRecorder.stop(); // This triggers onstop event to finalize
+                return; // Stop loop
+            }
+
+            requestAnimationFrame(exportLoop);
+        }
+
+        function finalizeExport(originalSafeZoneSetting) {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const a = document.createElement('a');
+            document.body.appendChild(a);
+            a.style = 'display: none';
+            a.href = url;
+            a.download = `ardhana-clip-${Date.now()}.webm`;
+            a.click();
+            
+            // Cleanup
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Reset Audio Routing so preview works again
+            if(mediaElementSource && audioContext) {
+                mediaElementSource.disconnect();
+                mediaElementSource.connect(audioContext.destination);
+            }
+
+            resetExportUI(originalSafeZoneSetting);
+            showToast("Video berhasil diexport!");
+            els.toast.classList.replace('bg-red-500', 'bg-green-500'); // Green for success
+            setTimeout(() => els.toast.classList.replace('bg-green-500', 'bg-red-500'), 3500);
+        }
+
+        function resetExportUI(originalSafeZoneSetting) {
+            state.isExporting = false;
+            state.showSafeZone = originalSafeZoneSetting;
+            els.exportText.textContent = "Pangkas & Unduh";
+            els.btnExport.classList.remove('opacity-75', 'cursor-not-allowed');
+            els.btnExport.disabled = false;
+            els.exportProgress.classList.add('hidden');
+            requestRender(); // Render one last frame to restore safe zone if needed
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', initEvents);
+
+    </script>
+</body>
+</html>
